@@ -1,0 +1,85 @@
+# EdgeGuard Model Configuration
+# All architectural hyperparameters for the multimodal network
+
+model:
+  name: "EdgeGuard-Multimodal"
+
+  # Visual Encoder: DeiT-small-distilled
+  visual:
+    pretrained_model: "timm/deit_small_distilled_patch16_224"
+    feature_dim: 384
+    image_size: 224
+    patch_size: 16
+    embed_dim: 384
+    depth: 12
+    num_heads: 6
+    # LoRA config for visual encoder
+    lora:
+      enabled: true
+      r: 16
+      lora_alpha: 32
+      lora_dropout: 0.05
+      target_modules: ["q_proj", "v_proj"]
+      bias: "none"
+      task_type: "FEATURE_EXTRACTION"
+
+  # Text Encoder: DistilBERT
+  text:
+    pretrained_model: "distilbert-base-uncased"
+    feature_dim: 768
+    projection_dim: 384
+    max_seq_length: 128
+    # LoRA config for text encoder
+    lora:
+      enabled: true
+      r: 16
+      lora_alpha: 32
+      lora_dropout: 0.05
+      target_modules: ["q_proj", "v_proj"]
+      bias: "none"
+      task_type: "FEATURE_EXTRACTION"
+
+  # Temporal Encoder: 2-layer LSTM
+  temporal:
+    input_dim: 768  # concatenated visual(384) + text(384)
+    hidden_dim: 256
+    num_layers: 2
+    dropout: 0.1
+    bidirectional: false
+    # Adapter LoRA config for LSTM
+    adapter:
+      enabled: true
+      bottleneck_dim: 8
+      r: 8
+      lora_alpha: 16
+      lora_dropout: 0.05
+
+  # Cross-Modal Fusion
+  cross_attention:
+    query_dim: 384      # visual features as query
+    key_value_dim: 384  # text features as key/value
+    num_heads: 8
+    dropout: 0.1
+
+  # Classification Heads
+  behavior_classifier:
+    input_dim: 640  # cross_attn(384) + temporal(256)
+    num_classes: 7
+    classes: ["fighting", "falling", "climbing", "loitering", "retrograde", "gathering", "normal"]
+    dropout: 0.3
+
+  alert_classifier:
+    input_dim: 640  # shared features
+    num_classes: 5
+    classes: ["intrusion", "fault", "violation", "anomaly", "normal"]
+    dropout: 0.3
+
+  # Video Processing
+  video:
+    clip_length: 16      # frames per clip
+    stride: 4            # sliding window stride
+    sampling_rate: 1     # sample every N frames
+    fps: 25
+    frame_size: 224
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]

@@ -1,0 +1,112 @@
+# EdgeGuard Training Configuration
+
+training:
+  # General settings
+  seed: 42
+  mixed_precision: "fp16"
+  gradient_checkpointing: true
+  dataloader_num_workers: 4
+  pin_memory: true
+
+  # PEFT Strategy
+  peft_strategy: "lora_adaptor"  # lora | adapter | lora_adapter
+
+  # LoRA config (shared for visual and text encoders)
+  lora:
+    r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    target_modules: ["q_proj", "v_proj"]
+    bias: "none"
+    task_type: "FEATURE_EXTRACTION"
+
+  # Adapter LoRA config for LSTM
+  adapter_lora:
+    r: 8
+    lora_alpha: 16
+    lora_dropout: 0.05
+    bottleneck_dim: 8
+
+  # Optimization
+  optimizer:
+    type: "adamw"
+    lr: 2.0e-4
+    weight_decay: 0.01
+    betas: [0.9, 0.999]
+
+  scheduler:
+    type: "cosine"
+    warmup_ratio: 0.05
+    min_lr: 1.0e-6
+
+  # Training schedule
+  epochs: 5
+  batch_size: 8
+  gradient_accumulation_steps: 4
+  max_grad_norm: 1.0
+  eval_interval: 500
+  save_interval: 1000
+  log_interval: 50
+
+  # Freezing strategy
+  freeze_backbone: true
+  trainable_components:
+    - "lora_visual"
+    - "lora_text"
+    - "adapter_lstm"
+    - "cross_attention"
+    - "classification_head"
+
+  # Checkpointing
+  checkpoint_dir: "checkpoints"
+  resume_from: null
+
+  # MLflow tracking
+  mlflow:
+    enabled: true
+    experiment_name: "EdgeGuard-Training"
+    tracking_uri: "http://localhost:5000"
+
+# Dataset paths
+dataset:
+  # Public datasets
+  coco2017:
+    root: "data/coco2017"
+    annotation: "data/coco2017/annotations"
+
+  ucf101:
+    root: "data/ucf101"
+    split: "data/ucf101/list"
+
+  # Private dataset (optional)
+  private:
+    root: "data/private"
+    train_split: "data/private/train"
+    val_split: "data/private/val"
+    alert_text_file: "data/private/alert_texts.json"
+
+  # Demo dataset (synthetic for testing)
+  demo:
+    num_samples: 100
+    generate_synthetic: true
+
+# Data augmentation
+augmentation:
+  visual:
+    random_crop: true
+    random_horizontal_flip: true
+    color_jitter:
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.2
+      hue: 0.1
+    gaussian_blur:
+      enabled: true
+      kernel_size: 5
+      sigma: [0.1, 2.0]
+    normalize: true
+
+  text:
+    synonym_replacement: true
+    random_deletion: false
+    back_translation: false

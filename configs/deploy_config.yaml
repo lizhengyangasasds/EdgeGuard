@@ -1,0 +1,89 @@
+# EdgeGuard Deployment Configuration
+
+deployment:
+  # Target platform
+  platform: "jetson_orin_nano"  # jetson_orin_nano | x86_64 | aarch64
+  precision: "int8"            # fp32 | fp16 | int8
+
+  # ONNX Export settings
+  onnx:
+    opset_version: 14
+    input_names: ["video_frames", "text_tokens"]
+    input_shapes:
+      video_frames: [[1, 16, 3, 224, 224]]
+      text_tokens: [[1, 128]]
+    output_names: ["behavior_logits", "alert_logits"]
+    dynamic_axes:
+      video_frames:
+        0: "batch_size"
+      text_tokens:
+        0: "batch_size"
+    optimize_for_mobile: false
+
+  # TensorRT settings
+  tensorrt:
+    workspace_size: 4          # GB
+    max_batch_size: 8
+    min_batch_size: 1
+    opt_batch_size: 4
+    # Dynamic batch sizes for runtime
+    dynamic_batch_sizes: [1, 4, 8]
+    # INT8 quantization
+    int8:
+      enabled: true
+      calibration_dataset_size: 1000
+      calibration_cache: "deployment/calibration_cache.bin"
+    # FP16 for LSTM layers (INT8 precision loss on RNN)
+    fp16_layers: ["lstm"]
+    builder_config:
+      tf32: true
+      refittable: false
+      disable_timing_cache: false
+
+  # Inference engine
+  inference:
+    warmup_iterations: 10
+    num_inference_iterations: 100
+    enable_profiling: false
+    profile_output_dir: "deployment/profiles"
+
+  # Performance targets
+  targets:
+    max_latency_ms: 85
+    min_fps: 15
+    max_memory_mb: 2048
+
+# Edge-Cloud Communication
+edge_cloud:
+  mqtt:
+    broker_host: "mqtt.example.com"
+    broker_port: 1883
+    keepalive: 60
+    qos: 1
+    topics:
+      model_push: "edgeguard/model/push"
+      model_ack: "edgeguard/model/ack"
+      inference_report: "edgeguard/inference/report"
+      anomaly_alert: "edgeguard/alert/anomaly"
+    auth:
+      username: "edgeguard"
+      password: "${MQTT_PASSWORD}"
+
+  model_registry:
+    storage_dir: "models"
+    max_versions: 5
+    versioning_scheme: "semver"
+
+  edge:
+    device_id: "edge-001"
+    location: "zone-a"
+    report_interval_seconds: 60
+    alert_threshold: 0.75
+
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/edgeguard.log"
+  console: true
+  metrics_log: "logs/metrics.log"
