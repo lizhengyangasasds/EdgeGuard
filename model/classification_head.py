@@ -86,6 +86,8 @@ class BehaviorClassifier(nn.Module):
         dropout: Dropout probability.
     """
 
+    BEHAVIOR_CLASSES = ["fighting", "falling", "climbing", "loitering", "retrograde", "gathering", "normal"]
+
     def __init__(
         self,
         input_dim: int = 640,
@@ -129,6 +131,8 @@ class AlertClassifier(nn.Module):
         num_classes: Number of alert classes (default 5).
         dropout: Dropout probability.
     """
+
+    ALERT_CLASSES = ["intrusion", "fault", "violation", "anomaly", "normal"]
 
     def __init__(
         self,

@@ -80,6 +80,7 @@ class EdgeService:
         self.inference_count = 0
         self.total_latency_ms = 0.0
         self.fps = 0.0
+        self.start_time = None
 
     def _load_model(self, model_path: Optional[str]) -> EdgeGuardMultimodalNet:
         """Load PyTorch model."""
@@ -252,7 +253,8 @@ class EdgeService:
 
         self.inference_count += 1
         self.total_latency_ms += latency_ms
-        self.fps = self.inference_count / (time.time() - self.start_time + 1e-6)
+        if self.start_time is not None:
+            self.fps = self.inference_count / (time.time() - self.start_time + 1e-6)
 
         if behavior_conf >= self.alert_threshold and behavior_class != 6:
             self.mqtt.publish_anomaly_alert(

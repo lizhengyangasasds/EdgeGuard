@@ -32,9 +32,14 @@ calibration_cache.bin
 deployment/calibration_data/
 
 # Data
-data/
-models/
+# Ignore data/ contents but keep the source modules (video_processor, text_processor, augmentation)
+data/*
+!data/__init__.py
+!data/video_processor.py
+!data/text_processor.py
+!data/augmentation.py
 !data/.gitkeep
+models/
 !models/.gitkeep
 
 # Virtual environments

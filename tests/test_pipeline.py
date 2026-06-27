@@ -82,7 +82,10 @@ class TestAlertTextGenerator:
         generator = AlertTextGenerator(language="zh")
         samples = generator.generate(num_samples=10)
         assert len(samples) == 10
-        assert all("\u4e00" in s["text"] or s["text"][0].isascii() for s in samples)
+        assert all(
+            s["text"] and any("\u4e00" <= c <= "\u9fff" for c in s["text"])
+            for s in samples
+        )
 
 
 class TestDataAugmentation:

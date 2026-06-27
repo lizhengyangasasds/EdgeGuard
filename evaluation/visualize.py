@@ -102,12 +102,12 @@ def plot_pr_curves(
 
     for i, class_name in enumerate(class_names):
         data = pr_data.get(f"class_{i}", {})
-        if data.get("precision"):
-            recall = data["precision"]
-            precision_vals = data["recall"]
+        if data.get("precision") is not None:
+            recall = data["recall"]
+            precision = data["precision"]
             ap = data.get("average_precision", 0)
             label = f"{class_name} (AP={ap:.3f})"
-            ax.plot(recall_vals, precision, label=label, color=colors[i], linewidth=2)
+            ax.plot(recall, precision, label=label, color=colors[i], linewidth=2)
 
     ax.set_xlabel("Recall", fontsize=12)
     ax.set_ylabel("Precision", fontsize=12)

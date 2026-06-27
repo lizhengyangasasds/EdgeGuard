@@ -161,15 +161,14 @@ class TemporalEncoder(nn.Module):
         """
         lstm_out, (hidden_n, _) = self.lstm(x)
 
-        if self.num_layers > 1:
-            adapter_idx = 0
-            for i in range(self.num_layers - 1):
-                layer_output = lstm_out
-                if adapter_idx < len(self.adapters):
-                    layer_output = self.adapters[adapter_idx](layer_output)
-                    adapter_idx += 1
+        output = lstm_out[:, -1, :]
+        if self.num_layers > 1 and self.adapter_enabled:
+            adapted = lstm_out
+            for adapter in self.adapters:
+                adapted = adapter(adapted)
+            output = adapted[:, -1, :]
 
-        output = self.layer_norm(lstm_out[:, -1, :])
+        output = self.layer_norm(output)
         return output
 
     def get_trainable_params(self) -> dict[str, int]:

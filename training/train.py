@@ -290,6 +290,10 @@ def train(
         batch_size=batch_size,
         num_samples=num_samples,
     )
+    val_loader = build_dataloader(
+        batch_size=batch_size,
+        num_samples=num_samples // 5,
+    )
 
     print(f"\nStarting training for {epochs} epochs...\n")
 
@@ -302,7 +306,7 @@ def train(
         print(f"  Alert Loss: {metrics['alert_loss']:.4f}")
         print(f"  LR: {metrics['lr']:.2e}")
 
-        val_metrics = trainer.evaluate(train_loader)
+        val_metrics = trainer.evaluate(val_loader)
         print(f"  Behavior Acc: {val_metrics['behavior_acc']:.4f}")
         print(f"  Alert Acc: {val_metrics['alert_acc']:.4f}")
 

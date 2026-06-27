@@ -6,9 +6,9 @@ LoRA targets attention q_proj and v_proj layers with configurable rank.
 """
 from __future__ import annotations
 
+from .lora import LoRALinear
 from dataclasses import dataclass
 from typing import Optional
-
 import torch
 import torch.nn as nn
 from transformers import AutoModel
@@ -23,46 +23,6 @@ class LoRAConfig:
     target_modules: tuple[str, ...] = ("q_proj", "v_proj")
     bias: str = "none"
     task_type: str = "FEATURE_EXTRACTION"
-
-
-class LoRALinear(nn.Module):
-    """
-    Low-Rank Adaptation linear layer.
-
-    Wraps a native linear layer with LoRA adaptation:
-    y = Wx + BAx  where A and B are low-rank matrices.
-    """
-
-    def __init__(
-        self,
-        original_layer: nn.Linear,
-        r: int,
-        lora_alpha: int,
-        lora_dropout: float = 0.0,
-    ) -> None:
-        super().__init__()
-        self.original = original_layer
-        self.original_weight = original_layer.weight
-        self.original_bias = original_layer.bias
-        self.original.requires_grad_(False)
-
-        self.r = r
-        self.scaling = lora_alpha / r
-        self.dropout = nn.Dropout(p=lora_dropout)
-
-        self.lora_A = nn.Parameter(torch.empty(r, original_layer.in_features))
-        self.lora_B = nn.Parameter(torch.empty(original_layer.out_features, r))
-
-        self._reset_parameters()
-
-    def _reset_parameters(self) -> None:
-        nn.init.kaiming_uniform_(self.lora_A, a=5**0.5)
-        nn.init.zeros_(self.lora_B)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        base_out = self.original(x)
-        lora_out = (self.dropout(x) @ self.lora_A.T @ self.lora_B.T) * self.scaling
-        return base_out + lora_out
 
 
 class VisualEncoder(nn.Module):

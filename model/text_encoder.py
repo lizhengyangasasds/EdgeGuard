@@ -6,9 +6,9 @@ Processes alert text tokens and projects to a shared embedding space.
 """
 from __future__ import annotations
 
+from .lora import LoRALinear
 from dataclasses import dataclass
 from typing import Optional
-
 import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
@@ -106,10 +106,7 @@ class TextEncoder(nn.Module):
         lora_dropout: float,
     ) -> nn.Module:
         """Wrap a linear layer with LoRA adaptation."""
-        lora_layer = LoRAAdaptedLinear(
-            original, r, lora_alpha, lora_dropout
-        )
-        return lora_layer
+        return LoRALinear(original, r, lora_alpha, lora_dropout)
 
     def get_tokenizer(self) -> AutoTokenizer:
         """Return the tokenizer for this encoder."""
@@ -146,35 +143,3 @@ class TextEncoder(nn.Module):
         }
 
 
-class LoRAAdaptedLinear(nn.Module):
-    """
-    Linear layer with LoRA adaptation injected.
-
-    The adapted forward: y = Wx + (alpha/r) * BAx
-    where B is initialized to zero (so training starts from pretrained model).
-    """
-
-    def __init__(
-        self,
-        original: nn.Linear,
-        r: int,
-        lora_alpha: float,
-        lora_dropout: float,
-    ) -> None:
-        super().__init__()
-        self.original = original
-        self.original_weight = original.weight
-        self.original_bias = original.bias
-        self.original.requires_grad_(False)
-
-        self.r = r
-        self.scaling = lora_alpha / r
-        self.dropout = nn.Dropout(p=lora_dropout)
-
-        self.lora_A = nn.Parameter(torch.randn(r, original.in_features) * 0.01)
-        self.lora_B = nn.Parameter(torch.zeros(original.out_features, r))
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        base_out = self.original(x)
-        lora_out = (self.dropout(x) @ self.lora_A.T @ self.lora_B.T) * self.scaling
-        return base_out + lora_out

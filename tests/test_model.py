@@ -10,7 +10,8 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from model.visual_encoder import VisualEncoder, LoRAConfig, LoRALinear
+from model.lora import LoRALinear
+from model.visual_encoder import VisualEncoder, LoRAConfig
 from model.text_encoder import TextEncoder, TextEncoderConfig
 from model.temporal_encoder import TemporalEncoder, AdapterLoRA, AdapterLoRAConfig
 from model.cross_modal import CrossModalAttention, CrossModalPooler
@@ -40,7 +41,19 @@ class TestLoRALinear:
         x = torch.randn(1, 128)
         out_base = original(x)
         out_lora = lora_layer(x)
-        assert not torch.allclose(out_base, out_lora, atol=1e-5)
+        # B is zero-initialized, so initial output == base output
+        assert torch.allclose(out_base, out_lora, atol=1e-5)
+
+        # But LoRA parameters are trainable and will diverge after training
+        loss = out_lora.sum()
+        loss.backward()
+        assert lora_layer.lora_B.grad is not None
+
+        # After gradient update, outputs should differ
+        with torch.no_grad():
+            lora_layer.lora_B.add_(lora_layer.lora_B.grad * 1e-3)
+        out_after = lora_layer(x)
+        assert not torch.allclose(out_base, out_after, atol=1e-4)
 
 
 class TestVisualEncoder:
